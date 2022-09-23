@@ -32,6 +32,14 @@ def set_arguments():
                         action='store_true',
                         help='retraining')
 
+    parser.add_argument('-ckpt',
+                        help='model weight file name')
+
+
+    parser.add_argument('-predction', 
+                        action='store_true',
+                        help='(test / prediction) ')
+    
     parser.add_argument('-multimodal', 
                         action='store_true',
                         help='multimodal')
@@ -40,6 +48,9 @@ def set_arguments():
                         default="", 
                         help='')
  
+    parser.add_argument('-img_size', 
+                    default=448)
+    
     parser.add_argument('-seed', 
                     default=1234)
        
@@ -51,8 +62,11 @@ def set_arguments():
 
     parser.add_argument('-batch', 
                     default=32)
+
+    parser.add_argument('-num_woarkers', 
+                    default=0, 
+                    type=int)    
     
-        
     return parser.parse_args()
     
     
