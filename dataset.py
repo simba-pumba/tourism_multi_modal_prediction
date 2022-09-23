@@ -1,42 +1,43 @@
 import pickle
 from PIL import Image
-from torchvision import transforms
+import torch
 from torch.utils.data import Dataset
 
-transform_train = transforms.Compose([
-    # transforms.Resize((600, 600), Image.BILINEAR),
-    # transforms.CenterCrop((448, 448)),
-    transforms.Resize((448, 448), Image.BILINEAR),
-    transforms.RandomHorizontalFlip(),  # solo se train
-    transforms.ToTensor(),
-    # transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
-])
-
-def labelEncoder(d):
+    
+def labelEncoder(label) -> list:
     with open('label_encoder.pickle','rb') as f:
         label_dic = pickle.load(f)
-        
-        pass
+    return [label_dic[i] for i in label]
 
-
+def labelDecoder(cat) -> list:
+    with open('label_decoder.pickle','rb') as f:
+        label_dic = pickle.load(f)    
+    return [label_dic[i] for i in cat]
 
     
 class ImageDataset(Dataset):
-    def __init__(self, data_list, test=False):
-        pass
-    
-    def __getitem(self, index):
-        pass
+    def __init__(self, csv_file, transforms, prediction=False):
+        self.img_path = csv_file["img_path"]
+        self.labels = labelEncoder(csv_file["cat3"])
+        self.transforms = transforms
+        self.prediction = prediction
         
-        # if test:
-        # return
-        # else:
-        # return 
+
+    
+    def __getitem__(self, idx):
+        img = Image.open("./open"+self.img_path[idx][1:])
+        img = img.convert("RGB")
+        img = self.transforms(img)
+        
+        if self.prediction:
+            return img
+        else:
+            return img, torch.LongTensor(self.labels[idx])
+        
     def __len__(self):
-        pass
-        # return len(?)
+        return len(self.labels)
 
 class MultiModalDataset(Dataset):
-    def __init__(self, data_list, test=False):
+    def __init__(self, csv_file, test=False):
         
         pass
