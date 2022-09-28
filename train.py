@@ -1,6 +1,4 @@
-
 import os
-from socket import NETLINK_SKIP
 import pandas as pd
 from PIL import Image
 import torch
@@ -12,6 +10,13 @@ from dataset import ImageDataset, MultiModalDataset
 
 from nts_net import model
 from nts_net.utils import init_log, progress_bar
+
+# https://dacon.io/competitions/official/235978/codeshare/6565?page=1&dtype=recent
+
+# https://ndb796.tistory.com/373
+
+# https://paperswithcode.com/task/multi-modal-document-classification
+# https://github.com/nicolalandro/ntsnet-cub200
 
 SAVE_FREQ = 1
 PROPOSAL_NUM = 6
@@ -28,7 +33,6 @@ def main(args):
     # load data
     
     transform_train = transforms.Compose([
-        transforms.ToTensor(),
         # transforms.Resize((600, 600), Image.BILINEAR),
         # transforms.CenterCrop((448, 448)),
         transforms.Resize((args.img_size, args.img_size), Image.BILINEAR),
@@ -38,7 +42,6 @@ def main(args):
     ])
 
     transform_test = transforms.Compose([
-        transforms.ToTensor(),
         # transforms.Resize((600, 600), Image.BILINEAR),
         # transforms.CenterCrop((448, 448)),
         transforms.Resize((args.img_size, args.img_size), Image.BILINEAR),
@@ -60,7 +63,7 @@ def main(args):
     val_loader = DataLoader(val_dataset, batch_size=args.batch, shuffle=False, num_workers=args.num_woarkers)
     
     
-    nets = model.attention_net(topN=PROPOSAL_NUM, num_classes=len(128), device=device)
+    nets = model.attention_net(topN=PROPOSAL_NUM, num_classes=128, device=device)
 
     if args.resume:
             ckpt = torch.load(args.ckpt)
@@ -157,7 +160,7 @@ def trainer(train_loader, val_loader, nets, start_epoch, creterion, LR, EPOCHS, 
                 test_acc,
                 total))
         ##########################  save model  ###############################
-        net_state_dict = nets.module.state_dict()
+        net_state_dict = nets.state_dict()
         if epoch % SAVE_FREQ == 0:
             torch.save({
                 'epoch': epoch,
