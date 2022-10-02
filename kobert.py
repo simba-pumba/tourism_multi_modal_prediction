@@ -1,27 +1,25 @@
-from transformers import AutoTokenizer, AutoModel, AutoConfig, PreTrainedModel
+from transformers import AutoModel, AutoConfig, PreTrainedModel
+from transformers.modeling_outputs import SequenceClassifierOutput
 import torch.nn as nn
 import torch
+from torch.nn import CrossEntropyLoss
 
-AutoTokenizer.from_pretrained("monologg/kobert")
-AutoModel.from_pretrained("monologg/kobert")
+
 
 class Yeji_Model(PreTrainedModel):
-    def __init__(self, config):
-        super().__init__(config)
-        self.num_labels = config.num_labels
-        self.type_emb_hidden = 16
-
-        self.bert = PreTrainedModel(config)
-
+    def __init__(self, args):
+        super().__init__(args)
+        self.num_labels = 128
+        # config = AutoConfig.from_pretrained("monologg/kobert")
+        self.bert = AutoModel.from_pretrained("monologg/kobert")
         self.dropout = nn.Dropout(0.1)
-        self.classifier1 = nn.Linear(config.hidden_size, self.type_emb_hidden)
-        self.embedding1 = nn.Embedding(self.num_labels, self.type_emb_hidden)
-        self.embedding2 = nn.Embedding(self.num_labels, self.type_emb_hidden)
-        self.classifier2 = nn.Linear(self.type_emb_hidden*2, self.num_labels)
+        self.classifier1 = nn.Linear(786, 393)
+        self.classifier2 = nn.Linear(393, 128)
 
         self.init_weights()
 
     def forward(self,
+                cat2,
                 input_ids=None,
                 attention_mask=None,
                 token_type_ids=None,
@@ -41,18 +39,13 @@ class Yeji_Model(PreTrainedModel):
         sequence_output = self.pre_classifier(sequence_output)
 
         # add before_labels at the sequence_output
-        emb_type_labels = self.type_embedding(before_labels)
+        # emb_type_labels = self.type_embedding(before_labels)
 
         # prediction class by using [ClS] token
-        logits = self.classifier(torch.cat((sequence_output[:, 0, :], emb_type_labels), dim=-1))
-
+        logits = self.classifier1(torch.cat((sequence_output[:, 0, :], cat2), dim=-1))
+        logits = self.classifier2(logits)
         loss = None
         if labels is not None:
-            if self.num_labels == 1:
-                #  We are doing regression
-                loss_fct = MSELoss()
-                loss = loss_fct(logits.view(-1), labels.view(-1))
-            else:
                 loss_fct = CrossEntropyLoss()
                 loss = loss_fct(logits.view(-1, self.num_labels), labels.view(-1))
 
