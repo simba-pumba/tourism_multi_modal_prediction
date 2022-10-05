@@ -1,4 +1,5 @@
 import pickle
+import pandas as pd
 from PIL import Image
 import torch
 from utils import clean, clean_str
@@ -21,7 +22,8 @@ def labelDecoder(cat) -> list:
 
     
 class ImageDataset(Dataset):
-    def __init__(self, csv_file, transforms, prediction=False):
+    def __init__(self, path, transforms, prediction=False):
+        csv_file = pd.read_csv(path)
         self.img_path = csv_file["img_path"]
         self.transforms = transforms
         self.prediction = prediction
@@ -50,14 +52,14 @@ class MultiModalDataset(Dataset):
 
 
 class NLDataset(Dataset):
-    def __init__(self, csv_file, prediction=False):
+    def __init__(self, path, device, prediction=False):
+        csv_file = pd.read_csv(path)
         self.overview = [clean_str(clean(i)) for i in csv_file["overview"]]
-        self.cat2 = csv_file["cat2"]
-        self.cat2Encoder = {v: i for i, v in enumerate(self.cat2.unique())}
-        self.cat2Decoder = {i: v for i, v in enumerate(self.cat2.unique())}
+        self.device = device
         self.prediction = prediction
         if not prediction:
             self.labels = labelEncoder(csv_file["cat3"])
+            self.cat2 = csv_file["cat2"]
     
         self.tokenizer = AutoTokenizer.from_pretrained("monologg/kobert")
 
@@ -73,16 +75,25 @@ class NLDataset(Dataset):
         input_ids = dic['input_ids'].squeeze(0)
         attention_mask = dic['attention_mask'].squeeze(0)
         token_type_ids = dic['token_type_ids'].squeeze(0)
-        cat2 = cat2Encoder[self.cat2[idx]]
-        label = self.labels[idx] if not self.prediction else None
+        if not self.prediction:
+            cat2 = torch.tensor(cat2Encoder[self.cat2[idx]])
+            label = torch.tensor(self.labels[idx]).long()
                             
-        return {
-            'input_ids': input_ids,
-            'attention_mask': attention_mask,
-            'token_type_ids': token_type_ids,
-            'cat2': cat2,
-            'label': label
-        }
+            return {
+                'input_ids': input_ids.to(self.device),
+                'attention_mask': attention_mask.to(self.device),
+                'token_type_ids': token_type_ids.to(self.device),
+                'cat2': cat2.to(self.device),
+                'labels': label.to(self.device)
+            }
+        else:
+            return {
+                'input_ids': input_ids.to(self.device),
+                'attention_mask': attention_mask.to(self.device),
+                'token_type_ids': token_type_ids.to(self.device),
+                'cat2': None,
+                'labels': None
+            }            
     
     def __len__(self):
         return len(self.labels)
